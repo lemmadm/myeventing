@@ -321,12 +321,41 @@ export const RequestForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubm
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (validate()) {
-            console.log('Form is valid. Submitting...', formData);
-            localStorage.removeItem('eventFormDraft'); // Clear draft on successful submission
-            onFormSubmit();
+            const form = e.target as HTMLFormElement;
+            const formDataToSubmit = new FormData(form);
+            
+            formData.features.forEach(feature => {
+                formDataToSubmit.append('features[]', feature);
+            });
+            
+            if (formData['event-banner']) {
+                formDataToSubmit.set('event-banner', formData['event-banner']);
+            }
+            if (formData['brand-guide']) {
+                formDataToSubmit.set('brand-guide', formData['brand-guide']);
+            }
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formDataToSubmit,
+                });
+
+                if (response.ok) {
+                    console.log('Form submitted successfully to Netlify');
+                    localStorage.removeItem('eventFormDraft');
+                    onFormSubmit();
+                } else {
+                    console.error('Form submission failed');
+                    alert('There was an error submitting your request. Please try again.');
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                alert('There was an error submitting your request. Please try again.');
+            }
         } else {
             console.log('Form has errors.', errors);
         }
@@ -347,7 +376,11 @@ export const RequestForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubm
                         <p className="mt-2 text-gray-500">Tell us your vision. We'll handle the magic.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} noValidate>
+                    <form onSubmit={handleSubmit} noValidate name="event-request" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" encType="multipart/form-data">
+                        <input type="hidden" name="form-name" value="event-request" />
+                        <p style={{ display: 'none' }}>
+                            <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                        </p>
                         <div className="space-y-8">
                             {/* Section 1: Event Details */}
                             <div className="p-6 border border-gray-200 rounded-lg">
